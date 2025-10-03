@@ -1,0 +1,45 @@
+global:
+  namespace: demo-app
+
+frontend:
+  replicaCount: 2
+  image:
+    repository: your-registry/demo-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: demo-app.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+backend:
+  replicaCount: 2
+  image:
+    repository: your-registry/demo-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3001
+  env:
+    DB_HOST: demo-app-postgresql
+    DB_PORT: 5432
+    DB_NAME: demoapp
+    DB_USER: postgres
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "postgres"
+    database: "demoapp"
+  persistence:
+    enabled: true
+    size: 8Gi
