@@ -26,6 +26,8 @@ spec:
         ports:
         - containerPort: 3001
         env:
+        - name: PORT
+          value: "3001"
         - name: DB_HOST
           value: {{ .Values.backend.env.DB_HOST | quote }}
         - name: DB_PORT
@@ -45,19 +47,16 @@ spec:
             port: 3001
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /health
             port: 3001
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3
         resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+          {{- toYaml .Values.backend.resources | nindent 12 }}
 ---
 apiVersion: v1
 kind: Service
@@ -68,5 +67,6 @@ spec:
   ports:
   - port: {{ .Values.backend.service.port }}
     targetPort: 3001
+    protocol: TCP
   selector:
     app: {{ .Chart.Name }}-backend

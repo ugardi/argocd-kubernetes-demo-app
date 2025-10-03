@@ -27,8 +27,8 @@ cd ../..
 
 echo -e "${YELLOW}Pushing images to registry...${NC}"
 # Uncomment if you have a registry setup
-# docker push ugardi/demo-frontend:latest
-# docker push ugardi/demo-backend:latest
+ docker push ugardi/demo-frontend:latest
+ docker push ugardi/demo-backend:latest
 
 # Create namespace
 echo -e "${YELLOW}Creating namespace...${NC}"

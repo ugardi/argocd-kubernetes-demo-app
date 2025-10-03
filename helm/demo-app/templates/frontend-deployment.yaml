@@ -17,7 +17,6 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "80"
-        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: frontend
@@ -41,12 +40,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
         resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
+          {{- toYaml .Values.frontend.resources | nindent 12 }}
 ---
 apiVersion: v1
 kind: Service
@@ -57,5 +51,7 @@ spec:
   ports:
   - port: {{ .Values.frontend.service.port }}
     targetPort: 80
+    protocol: TCP
   selector:
     app: {{ .Chart.Name }}-frontend
+    
