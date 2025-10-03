@@ -29,17 +29,17 @@ spec:
         - name: PORT
           value: "3001"
         - name: DB_HOST
-          value: {{ .Values.backend.env.DB_HOST | quote }}
+          value: "{{ .Release.Name }}-postgresql"
         - name: DB_PORT
-          value: {{ .Values.backend.env.DB_PORT | quote }}
+          value: "5432"
         - name: DB_NAME
-          value: {{ .Values.backend.env.DB_NAME | quote }}
+          value: "demoapp"
         - name: DB_USER
-          value: {{ .Values.backend.env.DB_USER | quote }}
+          value: "postgres"
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Chart.Name }}-postgresql
+              name: "{{ .Release.Name }}-postgresql"
               key: postgres-password
         livenessProbe:
           httpGet:

@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Chart.Name }}-db-init
+  labels:
+    app: {{ .Chart.Name }}-db-init
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}-db-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: db-init
+        image: postgres:15-alpine
+        env:
+        - name: PGHOST
+          value: "{{ .Release.Name }}-postgresql"
+        - name: PGPORT
+          value: "5432"
+        - name: PGUSER
+          value: "postgres"
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Release.Name }}-postgresql"
+              key: postgres-password
+        - name: PGDATABASE
+          value: "postgres"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting for PostgreSQL to be ready..."
+          until pg_isready -h $PGHOST -p $PGPORT -U $PGUSER; do
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
+          echo "Creating database if not exists..."
+          psql -c "CREATE DATABASE demoapp;"
+
+          echo "Creating tasks table..."
+          psql -d demoapp -c "
+            CREATE TABLE IF NOT EXISTS tasks (
+              id SERIAL PRIMARY KEY,
+              title VARCHAR(255) NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+          "
+          echo "Database initialization completed!"
