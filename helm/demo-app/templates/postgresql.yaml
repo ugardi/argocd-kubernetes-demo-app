@@ -1,0 +1,103 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Chart.Name }}-postgresql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "demo-app.labels" . | nindent 4 }}
+    app: {{ .Chart.Name }}-postgresql
+  annotations:
+    helm.sh/hook-weight: "-5"
+type: Opaque
+data:
+  postgres-password: {{ .Values.postgresql.auth.postgresPassword | b64enc | quote }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Chart.Name }}-postgresql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "demo-app.labels" . | nindent 4 }}
+    app: {{ .Chart.Name }}-postgresql
+spec:
+  serviceName: {{ .Chart.Name }}-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "demo-app.selectorLabels" . | nindent 6 }}
+      app: {{ .Chart.Name }}-postgresql
+  template:
+    metadata:
+      labels:
+        {{- include "demo-app.selectorLabels" . | nindent 8 }}
+        app: {{ .Chart.Name }}-postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+        imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+        env:
+        - name: POSTGRES_DB
+          value: {{ .Values.postgresql.auth.database | quote }}
+        - name: POSTGRES_USER
+          value: {{ .Values.postgresql.auth.username | quote }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Chart.Name }}-postgresql
+              key: postgres-password
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgresql-data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - exec pg_isready -U {{ .Values.postgresql.auth.username }} -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - exec pg_isready -U {{ .Values.postgresql.auth.username }} -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          {{- toYaml .Values.postgresql.resources | nindent 12 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: postgresql-data
+      labels:
+        {{- include "demo-app.labels" . | nindent 8 }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.persistence.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-postgresql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "demo-app.labels" . | nindent 4 }}
+    app: {{ .Chart.Name }}-postgresql
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    {{- include "demo-app.selectorLabels" . | nindent 4 }}
+    app: {{ .Chart.Name }}-postgresql
+{{- end }}
