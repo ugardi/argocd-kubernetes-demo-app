@@ -4,7 +4,7 @@ global:
 frontend:
   replicaCount: 2
   image:
-    repository: your-registry/demo-frontend
+    repository: ugardi/demo-frontend
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -23,7 +23,7 @@ frontend:
 backend:
   replicaCount: 2
   image:
-    repository: your-registry/demo-backend
+    repository: ugardi/demo-backend
     tag: latest
     pullPolicy: IfNotPresent
   service:

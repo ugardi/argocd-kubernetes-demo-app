@@ -12,12 +12,12 @@ echo -e "${YELLOW}Starting deployment...${NC}"
 
 # Build and push images
 echo -e "${YELLOW}Building Docker images...${NC}"
-docker build -t your-registry/demo-frontend:latest ./src/frontend
-docker build -t your-registry/demo-backend:latest ./src/backend
+docker build -t ugardi/demo-frontend:latest ./src/frontend
+docker build -t ugardi/demo-backend:latest ./src/backend
 
 echo -e "${YELLOW}Pushing images to registry...${NC}"
-docker push your-registry/demo-frontend:latest
-docker push your-registry/demo-backend:latest
+docker push ugardi/demo-frontend:latest
+docker push ugardi/demo-backend:latest
 
 # Create namespace
 echo -e "${YELLOW}Creating namespace...${NC}"

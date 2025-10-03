@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-username/argocd-kubernetes-demo-app
+    repoURL: https://github.com/ugardi/argocd-kubernetes-demo-app.git 
     targetRevision: HEAD
     path: helm/demo-app
     helm:
