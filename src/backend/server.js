@@ -6,10 +6,30 @@ const { Pool } = require('pg');
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Metrics collection
+let requestCount = 0;
+const requestStartTimes = new Map();
+
 // Middleware
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const requestId = ++requestCount;
+  requestStartTimes.set(requestId, Date.now());
+  
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  
+  res.on('finish', () => {
+    const duration = Date.now() - requestStartTimes.get(requestId);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+    requestStartTimes.delete(requestId);
+  });
+  
+  next();
+});
 
 // Database configuration
 const pool = new Pool({
@@ -18,6 +38,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'demoapp',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'password',
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // Health check endpoint
@@ -27,14 +50,32 @@ app.get('/health', async (req, res) => {
     res.status(200).json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      database: 'connected'
+      database: 'connected',
+      uptime: process.uptime()
     });
   } catch (error) {
     res.status(500).json({ 
       status: 'ERROR', 
       timestamp: new Date().toISOString(),
-      database: 'disconnected'
+      database: 'disconnected',
+      error: error.message
     });
+  }
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    const metrics = {
+      requestCount,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      memory: process.memoryUsage(),
+    };
+    
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to collect metrics' });
   }
 });
 
@@ -53,14 +94,14 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
   const { title } = req.body;
   
-  if (!title) {
+  if (!title || title.trim() === '') {
     return res.status(400).json({ error: 'Title is required' });
   }
 
   try {
     const result = await pool.query(
       'INSERT INTO tasks (title) VALUES ($1) RETURNING *',
-      [title]
+      [title.trim()]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -85,6 +126,19 @@ async function initializeDatabase() {
     process.exit(1);
   }
 }
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  await pool.end();
+  process.exit(0);
+});
 
 app.listen(port, async () => {
   await initializeDatabase();
